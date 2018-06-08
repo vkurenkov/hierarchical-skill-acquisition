@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <About>
+    <Summary>Training Environment</Summary>
+  </About>
+  
+  <ServerSection>
+    <ServerInitialConditions>
+        <Time>
+            <StartTime>12000</StartTime>
+            <AllowPassageOfTime>false</AllowPassageOfTime>
+        </Time>
+        <Weather>clear</Weather>
+    </ServerInitialConditions>
+    <ServerHandlers>
+      <FlatWorldGenerator generatorString="3;1*1:1;5;biome_1"/>
+      <DrawingDecorator>
+        <!--> Empty space for the environment (to remove persistent element) <!-->
+        <DrawCuboid x1="0" y1="1" z1="0" x2="14" y2="1" z2="10" type="air"/>
+
+        <!--> Rooms' floors <!-->
+        <DrawCuboid x1="0" y1="0" z1="0" x2="7" y2="0" z2="10" type="planks"/>
+        <DrawCuboid x1="8" y1="0" z1="0" x2="14" y2="0" z2="10" type="quartz_block"/>
+
+        <!--> Long walls <!-->
+        <DrawCuboid x1="0" y1="1" z1="0" x2="14" y2="3" z2="0" type="brick_block"/>
+        <DrawCuboid x1="0" y1="1" z1="10" x2="14" y2="3" z2="10" type="brick_block"/>
+
+        <!--> Short walls <!-->
+        <DrawCuboid x1="0" y1="1" z1="0" x2="0" y2="3" z2="10" type="brick_block"/>
+        <DrawCuboid x1="14" y1="1" z1="0" x2="14" y2="3" z2="10" type="brick_block"/>
+
+        <!--> The delimeter wall <!-->
+        <DrawCuboid x1="0" y1="1" z1="5" x2="14" y2="3" z2="5" type="brick_block"/>
+
+      </DrawingDecorator>
+      <ServerQuitFromTimeUp timeLimitMs="30000"/>
+      <ServerQuitWhenAnyAgentFinishes/>
+    </ServerHandlers>
+  </ServerSection>
+  
+  <AgentSection mode="Survival">
+    <Name>Irene</Name>
+    <AgentStart>
+        <Placement x="1.5" y="1" z="9.5" yaw="180"/>
+    </AgentStart>
+    <AgentHandlers>
+      <ObservationFromFullStats/>
+      <DiscreteMovementCommands/>
+    </AgentHandlers>
+  </AgentSection>
+</Mission>
