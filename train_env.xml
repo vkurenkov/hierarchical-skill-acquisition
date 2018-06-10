@@ -16,7 +16,7 @@
       <FlatWorldGenerator generatorString="3;1*1:1;5;biome_1"/>
       <DrawingDecorator>
         <!--> Empty space for the environment (to remove persistent element) <!-->
-        <DrawCuboid x1="0" y1="1" z1="0" x2="14" y2="1" z2="10" type="air"/>
+        <DrawCuboid x1="0" y1="1" z1="0" x2="14" y2="3" z2="10" type="air"/>
 
         <!--> Rooms' floors <!-->
         <DrawCuboid x1="0" y1="0" z1="0" x2="7" y2="0" z2="10" type="planks"/>
