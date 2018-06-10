@@ -4,9 +4,10 @@ Implementation of the Hierarchical and Interpretable Skill Acquisition in Multi-
 ### Milestones:
 
 **1.** Set up the environment
-- [ ] Define the training environment
-- [ ] Define the testing environment
-- [ ] Implement blocks/agent random placement
+- [X] Define the training environment
+- [X] Define the testing environment
+- [X] Implement blocks/agent random placement for the training environment
+- [ ] Implement blocks/agent random placement for the testing environment
 - [ ] Generate tasks
 
 **2.** Build RL models
