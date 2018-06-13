@@ -13,7 +13,7 @@ Implementation of the Hierarchical and Interpretable Skill Acquisition in Multi-
 **2.** Build RL models
 - [ ] Implement "flat" model
 - [ ] Implement hierarchical model
-  - [ ] "Flat" part
+  - [X] "Flat" part
   - [ ] Augmented policy
   - [ ] Switch policy
   - [ ] Instruction policy
