@@ -45,10 +45,14 @@
   <AgentSection mode="Survival">
     <Name>Irene</Name>
     <AgentStart>
-        <Placement x="1.5" y="1" z="9.5" yaw="180"/>
+        <Placement x="1.5" y="1" z="9.5"/>
+        <Inventory/>
     </AgentStart>
     <AgentHandlers>
       <ObservationFromFullStats/>
+      <ObservationFromHotBar/>
+      <ObservationFromRay/>
+      <InventoryCommands/>
       <DiscreteMovementCommands/>
     </AgentHandlers>
   </AgentSection>

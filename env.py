@@ -4,6 +4,7 @@ import random
 import numpy as np
 import warnings
 import xml.etree.ElementTree as ET
+import json
 
 TRAIN_ENV_PATH = os.path.join(".", "train_env.xml")
 TEST_ENV_PATH = os.path.join(".", "test_env.xml")
@@ -26,7 +27,6 @@ TRAIN_FREE_GRID.extend(
 TRAIN_FREE_GRID.extend([(4, 4), (5, 4)])
 TRAIN_ROOM1_START = (1, 1)
 TRAIN_ROOM2_START = (8, 1)
-
 
 def create_environment(task, train=True, seed=0):
     '''
@@ -104,10 +104,12 @@ def create_environment(task, train=True, seed=0):
 
     mission = MalmoPython.MissionSpec(ET.tostring(tree.getroot()), True)
     # Agent must be placed in the center of the grid cell
-    mission.startAt(room_start[0] + agent_position[0] + 0.5, 1, room_start[1] + agent_position[1] + 0.5)
+    # With specific pitch and randomize yaw (randomization is off due to some unknown bug in relative movement)
+    pitch = 30
+    yaw = 0#random.sample([0, 90, 180, -90], 1)[0]
+    mission.startAtWithPitchAndYaw(room_start[0] + agent_position[0] + 0.5, 1, room_start[1] + agent_position[1] + 0.5, pitch, yaw)
 
     return mission
-
 def _all_reachable(block_positions, agent_position):
     grid_positions = set(TRAIN_FREE_GRID)
     already_seen = set()
@@ -130,8 +132,7 @@ def _all_reachable(block_positions, agent_position):
 
         already_seen.add(cur_node)
 
-    return num_seen_blocks == len(block_positions)
-    
+    return num_seen_blocks == len(block_positions)   
 def _draw_block(drawing_decorator, x, y, z, block_type, colour):
     attributes = {
         "x": str(x),
@@ -142,3 +143,91 @@ def _draw_block(drawing_decorator, x, y, z, block_type, colour):
     }
     ET.SubElement(drawing_decorator, "ns0:DrawBlock", attributes)
     
+def get_reward(task, cur_observations, prev_observations):
+    if(len(prev_observations) == 0 and len(cur_observations) == 0):
+        raise Exception("There were no observations at all.")
+    if(len(cur_observations) == 0):
+        raise Exception("There was no current observation.")
+
+    obj = task[1]
+    instruction = task[0]
+    if(obj not in OBJECTS):
+        raise Exception("This task is not allowed. Specified object is not presented.")
+    if(instruction not in INSTRUCTIONS):
+        raise Exception("This task is not allowed. Specified instruction is not supported.")
+
+    if(instruction == "Find"):
+        return _reward_find(obj, cur_observations)
+    elif(instruction == "Get"):
+        return _reward_get(obj, cur_observations)
+    elif(instruction == "Put"):
+        return _reward_put(obj, prev_observations, cur_observations)
+    elif(instruction == "Stack"):
+        return _reward_stack(obj, prev_observations, cur_observations)
+def _reward_find(obj, cur_observations):
+    observation = json.loads(cur_observations[-1].text)
+    observed_object = observation["LineOfSight"]
+
+    if(observed_object["type"] == "wool" and observed_object["colour"] == str.upper(obj)):
+        if(observed_object["distance"] <= 1.5):
+            return 1.0
+
+    return 0.0
+def _reward_get(obj, cur_observations):
+    observation = json.loads(cur_observations[-1].text)
+    if(observation["Hotbar_0_item"] == "wool"):
+        if(observation["Hotbar_0_colour"] == str.upper(obj)):
+            return 1.0
+
+    return 0.0
+def _reward_put(obj, prev_observations, cur_observations):
+    cur_observation = json.loads(cur_observations[-1].text)
+    prev_observation = json.loads(prev_observations[-1].text)
+    if(prev_observation["Hotbar_0_item"] == "wool"):
+        if(prev_observation["Hotbar_0_colour"] == str.upper(obj)):
+            if(cur_observation["Hotbar_0_item"] == "air"):
+                return 1.0
+
+    return 0.0
+def _reward_stack(obj, prev_observations, cur_observations):
+    raise NotImplementedError()
+
+def act(agent_host, command):
+    '''
+    input:
+        command - is an integer in range [0; 7]
+            0 - move left; 1 - move right; 2 - move forward; 3 - move backwards;
+            4 - rotate left; 5 - rotate right; 6 - take object; 7 - put object;
+    output:
+        world_state - the world's state after the specified action was performed.
+    '''
+    if(command == 0):
+        agent_host.sendCommand("strafe -1")
+    elif(command == 1):
+        agent_host.sendCommand("strafe 1")
+    elif(command == 2):
+        agent_host.sendCommand("move 1")
+    elif(command == 3):
+        agent_host.sendCommand("move -1")
+    elif(command == 4):
+        agent_host.sendCommand("turn -1")
+    elif(command == 5):
+        agent_host.sendCommand("turn 1")
+    elif(command == 6):
+        agent_host.sendCommand("attack 1")
+    elif(command == 7):
+        agent_host.sendCommand("use 1")
+    else:
+        raise Exception("This command is not defined.")
+
+    # Trick to make it work "synchronously"
+    # Must be redesigned sometime after
+    world_state = agent_host.getWorldState()
+    while world_state.number_of_observations_since_last_state == 0 and world_state.is_mission_running:
+        world_state = agent_host.getWorldState()
+
+    world_state = agent_host.getWorldState()
+    while world_state.number_of_observations_since_last_state == 0 and world_state.is_mission_running:
+        world_state = agent_host.getWorldState()
+
+    return world_state
