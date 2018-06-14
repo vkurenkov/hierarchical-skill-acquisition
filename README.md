@@ -17,7 +17,7 @@ The paper proposes a new method for solving multi-task environments [1]. Authors
   <img src="https://user-images.githubusercontent.com/4092658/41410751-1db9aac8-6fe3-11e8-8589-dc526656e91e.png" alt="Architecture" width="60%" height="60%">
 </p>
   
-The picture above represents the proposed architecture. This architecture can be summarized in one sentence: It decides whether to use one of the already trained policies for a chosen sub-task or to provide a new set of low-level actions (such as move left, move right, and so on.)
+The picture above represents the proposed architecture. This architecture can be summarized in one sentence: At any given moment of time _t_, it decides whether to use one of the already trained policies for a chosen sub-task or to act on its own (low-level actions).
 
 All the way down to LSTM, we encode current state. Then we must decide on several things:
   - What sub-task policy should we use? (Instruction Policy, here comes the interpretability property)
