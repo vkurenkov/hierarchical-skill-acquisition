@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import warnings
 
 from torch.autograd import Variable
@@ -99,15 +100,69 @@ class TimeEncoder(nn.Module):
 
         return hidden[0].squeeze(0)
 
+class SwitchPolicy(nn.Module):
+    def __init__(self):
+        super(SwitchPolicy, self).__init__()
+
+        self.linear = nn.Linear(in_features=256, out_features=2)
+
+    def forward(self, time_encoded):
+        '''
+        input:
+            time_encoded - a tensor of size (batch_size, 256)
+        output:
+            switch - a tensor of size (batch_size, 2)
+        '''
+        return F.softmax(self.linear(time_encoded), dim=-1)
+
+class InstructionPolicy(nn.Module):
+    def __init__(self, num_instructions, num_objects):
+        super(InstructionPolicy, self).__init__()
+
+        self.num_instructions = num_instructions
+        self.num_objects = num_objects
+        self.instruction_linear = nn.Linear(in_features=256, out_features=num_instructions)
+        self.object_linear = nn.Linear(in_features=256, out_features=num_objects)
+
+    def forward(self, time_encoded):
+        '''
+        input:
+            time_encoded - a tensor of size (batch_size, 256)
+        output:
+            instruction_probs - a tensor of size (batch_size, num_instructions)
+            object_probs - a tensor of size (batch_size, num_objects)
+        '''
+        instruction_probs = F.softmax(self.instruction_linear(time_encoded), dim=-1)
+        object_probs = F.softmax(self.object_linear(time_encoded), dim=-1)
+
+        return instruction_probs, object_probs
+
+class AugmentedPolicy(nn.Module):
+    def __init__(self, num_actions):
+        super(AugmentedPolicy, self).__init__()
+
+        self.num_actions = num_actions
+        self.linear = nn.Linear(in_features=256, out_features=num_actions)
+    
+    def forward(self, time_encoded):
+        '''
+        input:
+            time_encoded - a tensor of size (batch_size, 256)
+        output:
+            action_probs - a tensor of size (batch_size, num_actions)
+        '''
+        action_probs = F.softmax(self.linear(time_encoded), dim=-1)
+        return action_probs
+
 if __name__ == "__main__":
     BATCH_SIZE = 10
     NUM_TIMESTEPS = 4
 
     # TESTING: Instruction part
-    instr_input = Variable(torch.LongTensor(10, 5).random_(0, 10))
+    instr_input = Variable(torch.LongTensor(BATCH_SIZE, 5).random_(0, 10))
     instr_encoder = InstructionEncoder(10)
     instr_encoding = instr_encoder.forward(instr_input)
-    assert(instr_encoding.size() == (10, 128))
+    assert(instr_encoding.size() == (BATCH_SIZE, 128))
     print("Instruction encoder: Output size is verified.")
 
     # TESTING: Visual part
@@ -128,3 +183,22 @@ if __name__ == "__main__":
     time_encoding = time_encoder.forward(fused_encoding)
     assert(time_encoding.size() == (BATCH_SIZE, 256))
     print("Time encoder: Output size is verified.")
+
+    # TESTING: Switch policy
+    switch_policy = SwitchPolicy()
+    switch = switch_policy.forward(time_encoding)
+    assert(switch.size() == (BATCH_SIZE, 2))
+    print("Switch policy: Output size is verified.")
+
+    # TESTING: Instruction policy
+    instruction_policy = InstructionPolicy(num_instructions=4, num_objects=6)
+    instruction, obj = instruction_policy.forward(time_encoding)
+    assert(instruction.size() == (BATCH_SIZE, 4))
+    assert(obj.size() == (BATCH_SIZE, 6))
+    print("Instruction policy: Output sizes are verified.")
+
+    # TESTING: Augmented policy
+    augmented_policy = AugmentedPolicy(num_actions=8)
+    action_probs = augmented_policy.forward(time_encoding)
+    assert(action_probs.size() == (BATCH_SIZE, 8))
+    print("Augmented policy: Output size is verified.")
