@@ -53,6 +53,7 @@ To make this architecture work, we need to manually specify the order of the tas
   - [X] Augmented policy
   - [X] Switch policy
   - [X] Instruction policy
+  - [ ] Value functions
   - [ ] Use of base policy
   - [ ] A2C optimization
   - [ ] Stochastic Temporal Grammar
