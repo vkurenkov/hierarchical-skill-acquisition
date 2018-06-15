@@ -50,9 +50,9 @@ To make this architecture work, we need to manually specify the order of the tas
 - [ ] Implement "flat" model
 - [ ] Implement hierarchical model
   - [X] "Flat" part
-  - [ ] Augmented policy
-  - [ ] Switch policy
-  - [ ] Instruction policy
+  - [X] Augmented policy
+  - [X] Switch policy
+  - [X] Instruction policy
   - [ ] Use of base policy
   - [ ] A2C optimization
   - [ ] Stochastic Temporal Grammar
