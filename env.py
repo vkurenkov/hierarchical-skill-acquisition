@@ -166,8 +166,10 @@ def get_reward(task, cur_observations, prev_observations):
         return _reward_stack(obj, prev_observations, cur_observations)
 def _reward_find(obj, cur_observations):
     observation = json.loads(cur_observations[-1].text)
+    if("LineOfSight" not in observation):
+        return 0.0
+        
     observed_object = observation["LineOfSight"]
-
     if(observed_object["type"] == "wool" and observed_object["colour"] == str.upper(obj)):
         if(observed_object["distance"] <= 1.5):
             return 1.0
