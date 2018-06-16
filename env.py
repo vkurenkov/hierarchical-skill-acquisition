@@ -252,4 +252,8 @@ def act(agent_host, command):
         world_state = agent_host.getWorldState()
         frames = world_state.video_frames
 
-    return observation, frames[0], done
+    frame = None
+    if(len(frames) > 0):
+        frame = frames[0]
+
+    return observation, frame, done
