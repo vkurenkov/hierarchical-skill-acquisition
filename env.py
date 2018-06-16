@@ -199,7 +199,9 @@ def act(agent_host, command):
             0 - move left; 1 - move right; 2 - move forward; 3 - move backwards;
             4 - rotate left; 5 - rotate right; 6 - take object; 7 - put object;
     output:
-        world_state - the world's state after the specified action was performed.
+        observation - observation state after the specified action was performed.
+        frame - 84x84x3 frame after the specified action was performed.
+        done - whether the mission is over.
     '''
     if(command == 0):
         agent_host.sendCommand("strafe -1")
@@ -222,12 +224,30 @@ def act(agent_host, command):
 
     # Trick to make it work "synchronously"
     # Must be redesigned sometime after
+    done = False
     world_state = agent_host.getWorldState()
-    while world_state.number_of_observations_since_last_state == 0 and world_state.is_mission_running:
+    while world_state.number_of_observations_since_last_state == 0:
+        if(not world_state.is_mission_running):
+            done = True
+            break
         world_state = agent_host.getWorldState()
 
     world_state = agent_host.getWorldState()
-    while world_state.number_of_observations_since_last_state == 0 and world_state.is_mission_running:
+    observation = world_state.observations
+    while world_state.number_of_observations_since_last_state == 0:
+        if(not world_state.is_mission_running):
+            done = True
+            break
         world_state = agent_host.getWorldState()
+        observation = world_state.observations
 
-    return world_state
+    # Wait for a proper frame
+    frames = world_state.video_frames
+    while world_state.number_of_video_frames_since_last_state == 0:
+        if(not world_state.is_mission_running):
+            done = True
+            break
+        world_state = agent_host.getWorldState()
+        frames = world_state.video_frames
+
+    return observation, frames[0], done

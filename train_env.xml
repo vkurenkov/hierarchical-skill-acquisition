@@ -54,6 +54,11 @@
       <ObservationFromRay/>
       <InventoryCommands/>
       <DiscreteMovementCommands/>
+      <MissionQuitCommands/>
+      <VideoProducer>
+        <Width>84</Width>
+        <Height>84</Height>
+      </VideoProducer>
     </AgentHandlers>
   </AgentSection>
 </Mission>
