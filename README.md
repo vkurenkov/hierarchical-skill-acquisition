@@ -44,7 +44,7 @@ To make this architecture work, we need to manually specify the order of the tas
 - [X] Define the testing environment
 - [X] Implement blocks/agent random placement for the training environment
 - [ ] Implement blocks/agent random placement for the testing environment
-- [ ] Generate tasks
+- [X] Define the curriculum
 
 **2.** Build RL models
 - [ ] Implement "flat" model
