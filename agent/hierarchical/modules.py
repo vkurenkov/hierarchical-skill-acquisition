@@ -24,10 +24,10 @@ class VisualEncoder(nn.Module):
         batch_size = img.size()[0]
         num_timesteps = img.size()[1]
 
-        encoding = self.conv1(img.view(batch_size * num_timesteps, 3, 84, 84))
-        encoding = self.conv2(encoding)
-        encoding = self.conv3(encoding)
-        encoding = self.linear(encoding.view(batch_size * num_timesteps, -1))
+        encoding = F.relu(self.conv1(img.view(batch_size * num_timesteps, 3, 84, 84)))
+        encoding = F.relu(self.conv2(encoding))
+        encoding = F.relu(self.conv3(encoding))
+        encoding = F.relu(self.linear(encoding.view(batch_size * num_timesteps, -1)))
 
         return encoding.view(batch_size, num_timesteps, -1)
 
