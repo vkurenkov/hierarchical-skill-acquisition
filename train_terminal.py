@@ -22,7 +22,7 @@ agent_host.setVideoPolicy(MalmoPython.VideoPolicy.LATEST_FRAME_ONLY)
 
 
 # Initialize training session
-session = Session("test_checkpoints")
+session = Session("hsa_terminal_policy_scenario_1.0")
 session.switch_group()
 
 # Training constants
@@ -31,7 +31,7 @@ TASKS = [("Find", "Red"), ("Find", "Yellow"), ("Find", "Blue"),
 BATCH_SIZE = 36
 SEED = 0
 SEED_REPETITIONS = 5
-SAVE_EVERY = 10
+SAVE_EVERY = 100
 NUM_LOW_LEVEL_ACTIONS = 6
 NUM_PAST_TIMESTEPS = 4
 max_EPISODE_LENGTH = 50
