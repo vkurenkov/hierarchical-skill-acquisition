@@ -13,6 +13,7 @@ from torch.distributions import Categorical
 from agent.hierarchical.terminal import TerminalPolicy
 from experience import ExperienceReplay, Memento
 from utils.malmo import wait_for_frames, wait_for_observations, preprocess_frame
+from utils.training import Session
 
 # Initialize agent host
 agent_host = MalmoPython.AgentHost()
@@ -20,8 +21,9 @@ agent_host.setObservationsPolicy(MalmoPython.ObservationsPolicy.LATEST_OBSERVATI
 agent_host.setVideoPolicy(MalmoPython.VideoPolicy.LATEST_FRAME_ONLY)
 
 
-# Initialize training logger
-logger = open(os.path.join(".", "logs", "training_policy_k=0.log"), "a")
+# Initialize training session
+session = Session("hsa_terminal_policy")
+session.switch_group()
 
 # Training constants
 TASKS = [("Find", "Red"), ("Find", "Yellow"), ("Find", "Blue"), 
@@ -47,26 +49,23 @@ policy = TerminalPolicy(num_actions=NUM_LOW_LEVEL_ACTIONS,
                         vocabulary_size=len(VOCABULARY))
 
 # Write information about current training session
-logger.write("\nTraining Session at " + str(datetime.datetime.now()))
-logger.write("\nDescription: " + DESCRIPTION)
-logger.write("\nTasks to learn: ")
+session.log("\nTraining Session at " + str(datetime.datetime.now()))
+session.log("\nDescription: " + DESCRIPTION)
+session.log("\nTasks to learn: ")
 for task in TASKS:
-    logger.write(task[0] + " " + task[1] + "; ")
-logger.write("\n")
-logger.write("\nEpisode length: " + str(max_EPISODE_LENGTH) + "; Batch size: " + str(BATCH_SIZE))
-logger.write("\nNum low-level actions: " + str(NUM_LOW_LEVEL_ACTIONS) + "; Num memory timesteps: " + str(NUM_PAST_TIMESTEPS))
-logger.write("\nReplay size: " + str(REPLAY_SIZE) + "; Return Discount: " + str(DISCOUNT))
-logger.write("\nEpsilon Start: " + str(EPSILON_START) + "; Epsilon Decay: " + str(EPSILON_DECAY) + "; Epsilon Min: " + str(EPSILON_MINIMUM))
-logger.write("\nSeed: " + str(SEED))
+    session.log(task[0] + " " + task[1] + "; ")
+session.log("\n")
+session.log("\nEpisode length: " + str(max_EPISODE_LENGTH) + "; Batch size: " + str(BATCH_SIZE))
+session.log("\nNum low-level actions: " + str(NUM_LOW_LEVEL_ACTIONS) + "; Num memory timesteps: " + str(NUM_PAST_TIMESTEPS))
+session.log("\nReplay size: " + str(REPLAY_SIZE) + "; Return Discount: " + str(DISCOUNT))
+session.log("\nEpsilon Start: " + str(EPSILON_START) + "; Epsilon Decay: " + str(EPSILON_DECAY) + "; Epsilon Min: " + str(EPSILON_MINIMUM))
+session.log("\nSeed: " + str(SEED))
 
 
 for task in TASKS:
-    logger.write("\n---> Training for subtask: " + str(task[0]) + " " + str(task[1]))
+    session.log("\n---> Training for subtask: " + str(task[0]) + " " + str(task[1]))
 
     replay_memory = ExperienceReplay(capaciy=REPLAY_SIZE)
-    last_200_rewards = []
-    last_200_timesteps = []
-    last_200_entropy = []
     episode_num = 0
     epsilon = EPSILON_START
 
@@ -77,9 +76,9 @@ for task in TASKS:
         episode_num += 1
 
         # Notify about the episode we start
-        logger.write("\n---------> Episode #" + str(episode_num))
-        logger.write("; Start at: " + str(datetime.datetime.now()) + "; ")
-        logger.flush()
+        session.log("\n---------> Episode #" + str(episode_num))
+        session.log("; Start at: " + str(datetime.datetime.now()) + "; ")
+        session.log_flush()
 
         # Load training environment
         my_mission = env.create_environment(task, seed=SEED+episode_num)
@@ -170,8 +169,8 @@ for task in TASKS:
         print("The mission has ended.")
         epsilon -= EPSILON_DECAY
         epsilon = max(EPSILON_MINIMUM, epsilon)
-        logger.write("End at: " + str(datetime.datetime.now()) + "; ")
-        logger.write("Reward: " + str(reward) + "; Num Timesteps: " + str(num_timesteps) + "; ")
+        session.log("End at: " + str(datetime.datetime.now()) + "; ")
+        session.log("Reward: " + str(reward) + "; Num Timesteps: " + str(num_timesteps) + "; ")
 
         agent_host.sendCommand("quit")
 
@@ -181,23 +180,20 @@ for task in TASKS:
         # Save number of timesteps
 
         # Check if mean reward is higher than we wanted it to be
-        last_200_rewards.append(reward)
-        last_200_timesteps.append(num_timesteps)
-        if(episode_num % 200 == 0):
-            mean_reward = np.mean(last_200_rewards)
-            mean_timesteps = np.mean(last_200_timesteps)
-            mean_entropy = np.mean(last_200_entropy)
-            logger.write("\n---------> Mean Reward: " + str(mean_reward))
-            logger.write("; Mean Timesteps: " + str(mean_timesteps))
-            logger.write("; Mean Entropy: " + str(mean_entropy))
-            last_200_rewards = []
-            last_200_timesteps = []
-            last_200_entropy = []
+        session.reward(reward)
+        session.timesteps(num_timesteps)
+        if(episode_num % 100 == 0):
+            mean_reward = np.mean(session.get_rewards()[-100:, 0])
+            mean_timesteps = np.mean(session.get_timesteps()[-100, 0])
+            mean_entropy = np.mean(session.get_actions_entropies()[-99, 0])
+            session.log("\n---------> Mean Reward: " + str(mean_reward))
+            session.log("; Mean Timesteps: " + str(mean_timesteps))
+            session.log("; Mean Entropy: " + str(mean_entropy))
             print("Save the model...")
-            torch.save(policy, os.path.join("checkpoints", "terminal-3_1-" + task[0] + "_" + task[1] + "-" + str(episode_num) + ".pt"))
+            session.checkpoint_model(policy, task[0] + "_" + task[1] + "_" + str(episode_num))
 
             if(mean_reward >= REWARD_THERSHOLD):
-                logger.write("\n---------> Mean Reward achieved required threshold. Success!")
+                session.log("\n---------> Mean Reward achieved required threshold. Success!")
                 break
 
         # Calculate episode returns and put the episode trajectory into the replay memory
@@ -227,10 +223,14 @@ for task in TASKS:
                                 mementos_actions, mementos_returns, mementos_probs)
 
         # Report current losses
-        last_200_entropy.append(entropy.data[0])
-        logger.write("; Entropy: " + str(entropy.data[0]))
-        logger.write("; Total Loss: " + str(total_loss.data[0]))
-        logger.write("; Value Loss: " + str(value_loss.data[0]))
-        logger.write("; A2C Loss: " + str(a2c_loss.data[0]))
+        session.log("; Entropy: " + str(entropy.data[0]))
+        session.log("; Total Loss: " + str(total_loss.data[0]))
+        session.log("; Value Loss: " + str(value_loss.data[0]))
+        session.log("; A2C Loss: " + str(a2c_loss.data[0]))
 
-logger.close()
+        session.actions_entropy(entropy.data[0])
+        session.a2c_loss(a2c_loss.data[0])
+        session.value_loss(value_loss.data[0])
+        session.total_loss(total_loss.data[0])
+
+session.close()
