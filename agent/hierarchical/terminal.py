@@ -37,7 +37,7 @@ class TerminalPolicy(nn.Module):
         output:
             state_returns - a tensor of size (batch_size, 1)
         '''
-        return self.value_function(time_encoded)
+        return F.sigmoid(self.value_function(time_encoded))
     
     def forward(self, frames, instructions):
         '''
@@ -66,7 +66,10 @@ class TerminalPolicy(nn.Module):
             returns - a tensor of size (batch_size, 1)
             action_probs - a tensor of size (batch_size, num_actions)
         output:
-            loss - calculated loss for the minibatch
+            total_loss
+            value_loss
+            a2c_loss
+            entropy - how uncertain we are about what to choose
         '''
         vision_encoding = self.vision.forward(frames)
         language_encoding = self.language.forward(instructions)
@@ -78,14 +81,18 @@ class TerminalPolicy(nn.Module):
         importance_weight = (cur_action_probs / action_probs).gather(1, actions)
         cur_action_log_probs = cur_action_probs.log().gather(1, actions)
 
-        loss = -(importance_weight * (cur_action_log_probs * advantage)).mean()
+        # Compute losses: for value function and for policy
+        value_loss = (advantage**2).mean().sqrt()
+        a2c_loss = -(importance_weight * (cur_action_log_probs * advantage)).mean()
+        entropy = (-cur_action_probs * cur_action_probs.log()).sum(1).mean()
+        total_loss = a2c_loss + value_loss
 
         self.optimizer.zero_grad()
-        loss.backward(retain_graph=True)
-        nn.utils.clip_grad_norm(self.parameters(), 1.0)
+        total_loss.backward(retain_graph=True)
+        nn.utils.clip_grad_norm(self.parameters(), 5.0)
         self.optimizer.step()
 
-        return loss
+        return total_loss, value_loss, a2c_loss, entropy
 
 if __name__ == "__main__":
     # TESTING
