@@ -22,7 +22,7 @@ class ExperienceReplay:
             return random.sample(container, n)
 
     def append(self, memento: Memento):
-        self.append(memento)
+        self.mementos.append(memento)
         self._remove_leftovers(self.mementos, self.capacity)
 
     def sample(self, n):
