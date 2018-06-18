@@ -22,7 +22,7 @@ agent_host.setVideoPolicy(MalmoPython.VideoPolicy.LATEST_FRAME_ONLY)
 
 
 # Initialize training session
-session = Session("hsa_terminal_policy_scenario_1.0")
+session = Session("hsa_terminal_policy_scenario_2.0")
 session.switch_group()
 
 # Training constants
@@ -38,7 +38,7 @@ max_EPISODE_LENGTH = 50
 DISCOUNT = 0.95
 REPLAY_SIZE = 800
 DESCRIPTION = "Sparse reward; Ordinary experience replay; Remove entropy from total loss;"
-EPSILON_START = 0.1
+EPSILON_START = 0.9
 EPSILON_DECAY = 0.00005 # Reach minimum in about 20k episodes
 EPSILON_MINIMUM = 0.00
 REWARD_THERSHOLD = 0.9
@@ -142,18 +142,10 @@ for task in TASKS:
                     last_frames = torch.cat((last_frames, preprocess_frame(frame).unsqueeze(0)), 0)
 
                 action_probs = policy.forward(Variable(last_frames.unsqueeze(0)), Variable(instruction))
-                if(random.random() > epsilon):
-                    top_action = torch.max(action_probs, 1)[1].data[0]
-                    for i in range(NUM_LOW_LEVEL_ACTIONS):
-                        if i == top_action:
-                            action_probs[0, i] = 1.0 - 0.001 * (NUM_LOW_LEVEL_ACTIONS - 1)
-                        else:
-                            action_probs[0, i] = 0.001
-
-                # top_action = torch.max(action_probs, 1)[1]
-                # prob_choose_top = 1.0 - epsilon
-                # action_probs[0, :] = action_probs[0, :] * (1 - prob_choose_top)
-                # action_probs[0, top_action.data[0]] = action_probs[0, top_action.data[0]] + prob_choose_top
+                top_action = torch.max(action_probs, 1)[1]
+                prob_choose_top = 1.0 - epsilon
+                action_probs[0, :] = action_probs[0, :] * (1 - prob_choose_top)
+                action_probs[0, top_action.data[0]] = action_probs[0, top_action.data[0]] + prob_choose_top
                 
                 sampled_action = Categorical(action_probs).sample()
 
